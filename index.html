@@ -19,7 +19,31 @@
     box-shadow: 0 10px 30px rgba(2, 6, 23, 0.25);
 }
 @media print {
-    @page { size: landscape; }
+    @page { size: portrait; }
+    @page landscapePage { size: landscape; }
+    body.printing-master-landscape @page { size: landscape; }
+    body.printing-endorse > *:not(#endorsePreviewModal),
+    body.printing-report > *:not(#endorsePreviewModal),
+    body.printing-accomplishment > *:not(#endorsePreviewModal) {
+        display: none !important;
+    }
+    body.printing-endorse #endorsePreviewModal,
+    body.printing-report #endorsePreviewModal,
+    body.printing-accomplishment #endorsePreviewModal {
+        position: static !important;
+        inset: auto !important;
+        display: block !important;
+        background: #ffffff !important;
+        padding: 0 !important;
+        overflow: visible !important;
+    }
+    body.printing-endorse #endorsePreviewModal > div,
+    body.printing-report #endorsePreviewModal > div,
+    body.printing-accomplishment #endorsePreviewModal > div {
+        max-width: none !important;
+        width: 100% !important;
+        margin: 0 !important;
+    }
     .report-landscape-page {
         max-width: none !important;
         width: 100% !important;
@@ -1248,8 +1272,8 @@
                 <div><label class="block text-slate-400 font-bold mb-1 uppercase text-[10px]">Default Portal</label><select id="formUserDefaultPortal" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white"></select></div>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div><label class="block text-slate-400 font-bold mb-1 uppercase text-[10px]">Shift Start</label><input type="time" id="formUserPortalStart" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" /></div>
-                <div><label class="block text-slate-400 font-bold mb-1 uppercase text-[10px]">Shift End</label><input type="time" id="formUserPortalEnd" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white" /></div>
+                <div><label class="block text-slate-400 font-bold mb-1 uppercase text-[10px]">Shift Start (24h HH:MM)</label><input type="text" id="formUserPortalStart" placeholder="08:00" maxlength="5" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white font-mono" /></div>
+                <div><label class="block text-slate-400 font-bold mb-1 uppercase text-[10px]">Shift End (24h HH:MM)</label><input type="text" id="formUserPortalEnd" placeholder="17:00" maxlength="5" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-white font-mono" /></div>
             </div>
             <div class="grid grid-cols-2 gap-2 pt-1">
                 <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="formCanReports" /> <span>Can Generate Reports</span></label>

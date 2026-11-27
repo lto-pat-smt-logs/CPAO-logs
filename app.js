@@ -314,12 +314,19 @@ function isTicketOwnedByCurrentUser(ticket) {
 
 function canMutateTicket(ticket) {
     if (!ticket) return false;
-    return canEditDeleteEndorseTickets();
+    if (isSuperAdmin() || isAdminTL()) return true;
+    return isTicketOwnedByCurrentUser(ticket);
+}
+
+function canDeleteTicket(ticket) {
+    if (!ticket) return false;
+    return canUserDeleteLogs();
 }
 
 function canEndorseTicket(ticket) {
     if (!ticket) return false;
-    return canEditDeleteEndorseTickets();
+    if (isSuperAdmin() || isAdminTL()) return true;
+    return isTicketOwnedByCurrentUser(ticket);
 }
 
 /* ============================================================================
@@ -982,32 +989,21 @@ function printReportDocument() {
     if (isReportPreviewEditing) setReportPreviewEditState(false);
     const sourceRoot = document.getElementById("printableReportDocument");
     const target = document.getElementById("endorseLetterPrintArea");
+    const previewModal = document.getElementById("endorsePreviewModal");
     if (target && sourceRoot) {
-        target.dataset.prevHtml = target.innerHTML;
-        target.dataset.prevClass = target.className;
-        target.className = "w-full max-w-[1120px]";
-
         const clonedRoot = sourceRoot.cloneNode(true);
         const landscapeNodes = Array.from(clonedRoot.querySelectorAll(".report-landscape-page"));
         landscapeNodes.forEach(n => n.remove());
 
         const portraitHtml = `<div class="report-a4-page">${clonedRoot.innerHTML}</div>`;
-        const landscapeHtml = landscapeNodes.map(n => n.outerHTML).join("");
-        target.innerHTML = portraitHtml + landscapeHtml;
+        target.className = "w-full max-w-[900px]";
+        target.innerHTML = portraitHtml;
     }
-    document.body.classList.add("printing-report");
-    setTimeout(() => {
-        window.print();
-        setTimeout(() => {
-            document.body.classList.remove("printing-report");
-            if (target && target.dataset.prevHtml !== undefined) {
-                target.innerHTML = target.dataset.prevHtml;
-                target.className = target.dataset.prevClass || "";
-                delete target.dataset.prevHtml;
-                delete target.dataset.prevClass;
-            }
-        }, 400);
-    }, 150);
+    setEndorsementEditState(false);
+    if (previewModal) {
+        previewModal.dataset.previewSource = "report";
+        previewModal.style.display = "flex";
+    }
 }
 
 function printMasterListLandscape() {
@@ -1029,25 +1025,16 @@ function printMasterListLandscape() {
     }).join("");
 
     const target = document.getElementById("endorseLetterPrintArea");
+    const previewModal = document.getElementById("endorsePreviewModal");
     if (target) {
-        target.dataset.prevHtml = target.innerHTML;
-        target.dataset.prevClass = target.className;
-        target.className = "w-full max-w-[1400px]";
+        target.className = "w-full max-w-[1240px]";
         target.innerHTML = masterOnlyHtml;
     }
-    document.body.classList.add("printing-report");
-    setTimeout(() => {
-        window.print();
-        setTimeout(() => {
-            document.body.classList.remove("printing-report");
-            if (target && target.dataset.prevHtml !== undefined) {
-                target.innerHTML = target.dataset.prevHtml;
-                target.className = target.dataset.prevClass || "";
-                delete target.dataset.prevHtml;
-                delete target.dataset.prevClass;
-            }
-        }, 400);
-    }, 150);
+    setEndorsementEditState(false);
+    if (previewModal) {
+        previewModal.dataset.previewSource = "master-landscape";
+        previewModal.style.display = "flex";
+    }
 }
 
 function ensureDirectoryOfficialsInitialized() {
@@ -1165,7 +1152,7 @@ function buildStandardLetterHeaderHtml() {
         ? `<div class="flex items-center gap-2.5 shrink-0">${logos.map(u => `<img src="${u}" class="h-12 w-auto object-contain" />`).join("")}</div>`
         : `<div class="flex items-center gap-2 shrink-0">
                <div class="w-11 h-11 rounded-full border-2 border-blue-900 bg-blue-50 flex items-center justify-center text-[9px] font-extrabold text-blue-900">LTO</div>
-               <div class="w-11 h-11 rounded-full border-2 border-amber-500 bg-amber-50 flex items-center justify-center text-[8px] font-extrabold text-amber-800 text-center leading-tight">BAGONG<br>PILIPINAS</div>
+               <div class="w-11 h-11 rounded-full border-2 border-amber-500 bg-amber-50 flex items-center justify-center text-[8px] font-extrabold text-amber-800 text-center leading-tight">NEW<br>PHILIPPINES</div>
            </div>`;
 
     return `
@@ -1785,6 +1772,42 @@ function showSystemConfirm(title, message, onConfirm, icon = "❓") {
         if (onConfirm) onConfirm();
     };
     modal.style.display = 'flex';
+}
+
+function showSystemPrompt(title, message, onSubmit, icon = "🔐", placeholder = "Enter value...") {
+    const modal = document.getElementById('systemModal');
+    if (!modal) return;
+    document.getElementById('systemModalTitleText').textContent = title;
+    document.getElementById('systemModalIcon').textContent = icon;
+    document.getElementById('systemModalMessage').innerHTML = `
+        <p class="mb-2.5">${escapeHtml(message)}</p>
+        <input type="password" id="systemModalPromptInput" placeholder="${escapeHtml(placeholder)}" class="w-full bg-slate-950 border border-slate-700 focus:border-sky-500 rounded-lg px-3 py-2 text-xs text-white outline-none" />
+    `;
+    document.getElementById('systemModalButtons').innerHTML = `
+        <button type="button" id="systemPromptCancelBtn" class="px-4 py-2 text-xs text-slate-300 bg-slate-800 hover:bg-slate-700 rounded font-semibold">Cancel</button>
+        <button type="button" id="systemPromptConfirmBtn" class="px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 rounded shadow">Confirm</button>
+    `;
+    const inputEl = document.getElementById('systemModalPromptInput');
+    const confirmAction = () => {
+        const val = inputEl ? inputEl.value : "";
+        closeSystemModal();
+        if (onSubmit) onSubmit(val);
+    };
+    document.getElementById('systemPromptCancelBtn').onclick = () => {
+        closeSystemModal();
+        if (onSubmit) onSubmit(null);
+    };
+    document.getElementById('systemPromptConfirmBtn').onclick = confirmAction;
+    if (inputEl) {
+        inputEl.addEventListener('keydown', (ev) => {
+            if (ev.key === 'Enter') {
+                ev.preventDefault();
+                confirmAction();
+            }
+        });
+    }
+    modal.style.display = 'flex';
+    setTimeout(() => { if (inputEl) inputEl.focus(); }, 20);
 }
 
 function closeSystemModal() {
@@ -3147,7 +3170,7 @@ function openSettingModal(type, index, groupName = null) {
         }
         container.innerHTML = `
             <div><label class="block text-slate-400 text-[10px] font-bold uppercase mb-1">Platform Name</label><input type="text" id="modalPlatformName" value="${escapeHtml(pName)}" required class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-white"></div>
-            <div><label class="block text-slate-400 text-[10px] font-bold uppercase mb-1">Ticket Prefix (Optional)</label><input type="text" id="modalPlatformPrefix" value="${escapeHtml(pPrefix)}" placeholder="Optional (e.g., CPAO)" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-amber-400 font-mono"></div>
+            <div><label class="block text-slate-400 text-[10px] font-bold uppercase mb-1">Ticket Prefix (Optional)</label><input type="text" id="modalPlatformPrefix" value="${escapeHtml(pPrefix)}" placeholder="Optional (leave blank if manual)" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-amber-400 font-mono"></div>
             <div><label class="flex items-center gap-2 text-xs font-bold text-sky-400"><input type="checkbox" id="modalPlatformAutoGen" ${pAuto ? 'checked' : ''}> Auto-Generate Ticket Number</label></div>
         `;
     } else if (type === 'categories') {
@@ -3234,8 +3257,9 @@ async function saveSettingItemForm(e) {
 
     if (type === 'platforms') {
         const name = document.getElementById('modalPlatformName').value.trim();
-        const prefix = document.getElementById('modalPlatformPrefix').value.trim();
         const autoGen = document.getElementById('modalPlatformAutoGen').checked;
+        const rawPrefix = document.getElementById('modalPlatformPrefix').value.trim();
+        const prefix = rawPrefix || (autoGen ? "CPAO" : "");
         const obj = { name, prefix, autoGen };
         if (index !== null) AppState.settings.platforms[index] = obj;
         else AppState.settings.platforms.push(obj);
@@ -6089,8 +6113,8 @@ async function commitTicketSubmission(newTicket, isEditing, idx) {
 async function deleteTicket(idx) {
     const t = AppState.tickets[idx];
     if (!t) return;
-    if (!canMutateTicket(t)) {
-        showSystemAlert("Access Restricted", "You can only delete ticket logs assigned to your own Admin account.", "🔒");
+    if (!canDeleteTicket(t)) {
+        showSystemAlert("Access Restricted", "Only Super Admin or AdminTL can delete ticket logs.", "🔒");
         return;
     }
 
@@ -6211,13 +6235,14 @@ function openViewTicketModal(idx) {
 
     const editBtn = document.getElementById('btnViewModalEdit');
     const endorseBtn = document.getElementById('btnViewModalEndorse');
-    const canAct = canEditDeleteEndorseTickets();
+    const canEditThis = canMutateTicket(t);
+    const canEndorseThis = canEndorseTicket(t);
     if (editBtn) {
-        editBtn.style.display = canAct ? 'inline-flex' : 'none';
+        editBtn.style.display = canEditThis ? 'inline-flex' : 'none';
         editBtn.onclick = () => { closeViewTicketModal(); openEditModal(idx); };
     }
     if (endorseBtn) {
-        endorseBtn.style.display = canAct ? 'inline-flex' : 'none';
+        endorseBtn.style.display = canEndorseThis ? 'inline-flex' : 'none';
         endorseBtn.onclick = () => { closeViewTicketModal(); openEndorseModal(idx); };
     }
 
@@ -6341,21 +6366,22 @@ function renderTable() {
             : '';
 
         const canEditThisRow = canMutateTicket(t);
+        const canDeleteThisRow = canDeleteTicket(t);
         const canEndorseThisRow = canEndorseTicket(t);
 
         const viewBtnHtml = `<button type="button" onclick="openViewTicketModal(${t._origIndex})" class="px-2 py-1 bg-sky-950/80 hover:bg-sky-900 text-sky-300 border border-sky-700/60 rounded text-[10px] font-bold cursor-pointer" title="View Ticket">👁️</button>`;
 
         const editBtnHtml = canEditThisRow
             ? `<button type="button" onclick="openEditModal(${t._origIndex})" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded text-[10px] font-bold cursor-pointer" title="Edit">✏️</button>`
-            : `<button type="button" disabled class="px-2 py-1 bg-slate-900/50 text-slate-600 border border-slate-800/60 rounded text-[10px] font-bold cursor-not-allowed opacity-45" title="Super Admin or AdminTL only">✏️</button>`;
+            : `<button type="button" disabled class="px-2 py-1 bg-slate-900/50 text-slate-600 border border-slate-800/60 rounded text-[10px] font-bold cursor-not-allowed opacity-45" title="Own logs or Super Admin / AdminTL only">✏️</button>`;
 
-        const deleteBtnHtml = canEditThisRow
+        const deleteBtnHtml = canDeleteThisRow
             ? `<button type="button" onclick="deleteTicket(${t._origIndex})" class="px-2 py-1 bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-800/60 rounded text-[10px] font-bold cursor-pointer" title="Delete">🗑️</button>`
             : `<button type="button" disabled class="px-2 py-1 bg-slate-900/50 text-slate-600 border border-slate-800/60 rounded text-[10px] font-bold cursor-not-allowed opacity-45" title="Super Admin or AdminTL only">🗑️</button>`;
 
         const endorseBtnHtml = canEndorseThisRow
             ? `<button type="button" onclick="openEndorseModal(${t._origIndex})" class="px-2 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded text-[10px] font-bold cursor-pointer" title="Endorse">📄</button>`
-            : `<button type="button" disabled class="px-2 py-1 bg-slate-900/50 text-slate-600 border border-slate-800/60 rounded text-[10px] font-bold cursor-not-allowed opacity-45" title="Super Admin or AdminTL only">📄</button>`;
+            : `<button type="button" disabled class="px-2 py-1 bg-slate-900/50 text-slate-600 border border-slate-800/60 rounded text-[10px] font-bold cursor-not-allowed opacity-45" title="Own logs or Super Admin / AdminTL only">📄</button>`;
 
         const rowCellsHtml = `
             <td class="text-slate-400 font-mono text-[11px] text-center">${idx + 1}</td>
@@ -6442,104 +6468,76 @@ async function deleteAllLogsForSelectedDate() {
         return;
     }
 
-    const sysModal = document.getElementById('systemModal');
-    const sysTitle = document.getElementById('systemModalTitleText');
-    const sysIcon = document.getElementById('systemModalIcon');
-    const sysMsg = document.getElementById('systemModalMessage');
-    const sysBtns = document.getElementById('systemModalButtons');
-    if (!sysModal || !sysTitle || !sysIcon || !sysMsg || !sysBtns) return;
+    const accountRecord = (AppState.users || []).find(
+        u => String(u.username || '').trim().toLowerCase() === String(currentUser.username || '').trim().toLowerCase()
+    );
+    const expectedPass = String((accountRecord && (accountRecord.pass ?? accountRecord.password)) ?? currentUser.pass ?? '');
 
-    sysTitle.textContent = "Super Admin Verification Required";
-    sysIcon.textContent = "🔒";
-    sysMsg.textContent = `Enter your Super Admin password to delete ALL ${matchingIndices.length} ticket log(s) for ${filterMDY || dateFilter}. This action cannot be undone.`;
-    sysBtns.innerHTML = `
-        <div class="w-full space-y-3">
-            <input type="password" id="systemBulkDeletePasswordInput" autocomplete="current-password" placeholder="Enter Super Admin password..." class="w-full bg-slate-950 border border-slate-700 focus:border-sky-500 rounded-lg px-3 py-2 text-xs text-white outline-none" />
-            <div class="flex justify-end gap-2">
-                <button type="button" onclick="closeSystemModal()" class="px-4 py-2 text-xs text-slate-300 bg-slate-800 hover:bg-slate-700 rounded font-semibold cursor-pointer">Cancel</button>
-                <button type="button" id="systemVerifyBulkDeleteBtn" class="px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 rounded shadow cursor-pointer">Confirm Delete</button>
-            </div>
-        </div>
-    `;
-    sysModal.style.display = 'flex';
-
-    const passInput = document.getElementById('systemBulkDeletePasswordInput');
-    const verifyBtn = document.getElementById('systemVerifyBulkDeleteBtn');
-
-    const submitBulkDelete = async () => {
-        const enteredPass = String(passInput?.value ?? '');
-        const accountRecord = (AppState.users || []).find(
-            u => String(u.username || '').trim().toLowerCase() === String(currentUser.username || '').trim().toLowerCase()
-        );
-        const expectedPass = String((accountRecord && (accountRecord.pass ?? accountRecord.password)) ?? currentUser.pass ?? '');
-
-        if (!expectedPass || enteredPass !== expectedPass) {
-            closeSystemModal();
-            showSystemAlert("Authentication Failed", "Incorrect Super Admin password. Bulk delete cancelled.", "🔒");
-            return;
-        }
-
-        closeSystemModal();
-        matchingIndices.sort((a, b) => b - a);
-        const deletedItems = [];
-        for (const idx of matchingIndices) {
-            const removed = AppState.tickets[idx];
-            if (removed) {
-                deletedItems.push({
-                    rowIndex: removed.rowIndex || (idx + 2),
-                    referralNo: removed.referralNo,
-                    clientKey: `${String(removed.referralNo || '').trim().toLowerCase()}|${String(removed.dateReceived || '').trim()}|${String(removed.complainantName || '').trim().toLowerCase()}`
-                });
-                removePendingTicketSync(deletedItems[deletedItems.length - 1].clientKey);
-                AppState.tickets.splice(idx, 1);
+    showSystemPrompt(
+        "Super Admin Password Required",
+        `Enter your Super Admin password to delete ALL ${matchingIndices.length} ticket log(s) for ${filterMDY || dateFilter}:`,
+        (enteredPass) => {
+            if (enteredPass === null) return;
+            if (!expectedPass || enteredPass !== expectedPass) {
+                showSystemAlert("Authentication Failed", "Incorrect Super Admin password. Bulk delete cancelled.", "🔒");
+                return;
             }
-        }
-        saveStorage();
-        renderTable();
-        updateKPIs();
-        render24HourReminderBanner();
+            showSystemConfirm(
+                "Delete All Logs for Date",
+                `Are you sure you want to delete ALL ${matchingIndices.length} ticket log(s) for ${filterMDY || dateFilter}? This action cannot be undone.`,
+                async () => {
+            matchingIndices.sort((a, b) => b - a);
+            const deletedItems = [];
+            for (const idx of matchingIndices) {
+                const removed = AppState.tickets[idx];
+                if (removed) {
+                    deletedItems.push({
+                        rowIndex: removed.rowIndex || (idx + 2),
+                        referralNo: removed.referralNo,
+                        clientKey: `${String(removed.referralNo || '').trim().toLowerCase()}|${String(removed.dateReceived || '').trim()}|${String(removed.complainantName || '').trim().toLowerCase()}`
+                    });
+                    removePendingTicketSync(deletedItems[deletedItems.length - 1].clientKey);
+                    AppState.tickets.splice(idx, 1);
+                }
+            }
+            saveStorage();
+            renderTable();
+            updateKPIs();
+            render24HourReminderBanner();
 
-        let anyFailed = false;
-        for (const item of deletedItems) {
-            try {
-                const response = await fetchWithRetry(getActiveSettingsAppsScriptUrl(), {
-                    method: "POST",
-                    headers: { "Content-Type": "text/plain;charset=utf-8" },
-                    body: JSON.stringify({
-                        action: "deleteLog",
-                        sheet: getActiveLogsWorksheetName(),
-                        rowIndex: item.rowIndex,
-                        row: item.rowIndex,
-                        referralNo: item.referralNo,
-                        ticketNo: item.referralNo
-                    })
-                }, 2);
-                const rawText = await response.text();
-                let resData = {};
-                try { resData = rawText ? JSON.parse(rawText) : {}; } catch (e) { resData = {}; }
-                if (resData && (resData.error || resData.success === false)) {
+            let anyFailed = false;
+            for (const item of deletedItems) {
+                try {
+                    const response = await fetchWithRetry(getActiveSettingsAppsScriptUrl(), {
+                        method: "POST",
+                        headers: { "Content-Type": "text/plain;charset=utf-8" },
+                        body: JSON.stringify({
+                            action: "deleteLog",
+                            sheet: getActiveLogsWorksheetName(),
+                            rowIndex: item.rowIndex,
+                            row: item.rowIndex,
+                            referralNo: item.referralNo,
+                            ticketNo: item.referralNo
+                        })
+                    }, 2);
+                    const rawText = await response.text();
+                    let resData = {};
+                    try { resData = rawText ? JSON.parse(rawText) : {}; } catch (e) { resData = {}; }
+                    if (resData && (resData.error || resData.success === false)) {
+                        anyFailed = true;
+                    }
+                } catch (e) {
                     anyFailed = true;
                 }
-            } catch (e) {
-                anyFailed = true;
             }
+            updateSyncStatusBadge(anyFailed ? "error" : (loadPendingSyncQueue().length > 0 ? "queued" : "synced"));
+            showToast(anyFailed ? "Some logs removed locally; cloud delete had errors." : `Deleted ${deletedItems.length} log(s) for ${filterMDY || dateFilter}.`);
         }
-        updateSyncStatusBadge(anyFailed ? "error" : (loadPendingSyncQueue().length > 0 ? "queued" : "synced"));
-        showToast(anyFailed ? "Some logs removed locally; cloud delete had errors." : `Deleted ${deletedItems.length} log(s) for ${filterMDY || dateFilter}.`);
-    };
-
-    if (verifyBtn) {
-        verifyBtn.onclick = submitBulkDelete;
-    }
-    if (passInput) {
-        passInput.onkeydown = (ev) => {
-            if (ev.key === 'Enter') {
-                ev.preventDefault();
-                submitBulkDelete();
-            }
-        };
-        setTimeout(() => passInput.focus(), 30);
-    }
+            );
+        },
+        "🔐",
+        "Enter Super Admin password"
+    );
 }
 
 function updateKPIs() {
@@ -7092,7 +7090,7 @@ function buildEndorsementAttachmentsHtml() {
     endorseAttachments.forEach((att, attIdx) => {
         const pages = Array.isArray(att.pages) && att.pages.length > 0 ? att.pages : (att.dataUrl ? [att.dataUrl] : []);
         pages.forEach((imgUrl, pIdx) => {
-            const pageLabel = pages.length > 1 ? `Attachment #${attIdx + 1} (Page ${pIdx + 1} of ${pages.length})` : `Attachment #${attIdx + 1}`;
+            const pageLabel = pages.length > 1 ? `${att.name} (Page ${pIdx + 1} of ${pages.length})` : att.name;
             flattenedItems.push({
                 order: attIdx + 1,
                 label: pageLabel,
@@ -7107,7 +7105,7 @@ function buildEndorsementAttachmentsHtml() {
         const stackedCards = flattenedItems.map((item, idx) => `
             <div class="border border-slate-300 rounded-lg p-2.5 bg-white space-y-1.5">
                 <div class="flex items-center justify-between text-[10px] font-bold text-slate-600 border-b border-slate-200 pb-1">
-                    <span>Attachment #${idx + 1}</span>
+                    <span>Attachment #${idx + 1}: ${escapeHtml(item.label)}</span>
                 </div>
                 <div class="flex justify-center">
                     <img src="${item.src}" class="max-w-full max-h-[260px] w-auto h-auto object-contain rounded" />
@@ -7133,7 +7131,7 @@ function buildEndorsementAttachmentsHtml() {
             const pairCards = pair.map((item, idxInPair) => `
                 <div class="border border-slate-300 rounded-lg p-3 bg-white flex-1 flex flex-col justify-between gap-2">
                     <div class="text-[10px] font-bold text-slate-700 border-b border-slate-200 pb-1">
-                        Attachment #${i + idxInPair + 1}
+                        Attachment #${i + idxInPair + 1}: ${escapeHtml(item.label)}
                     </div>
                     <div class="flex-1 flex items-center justify-center overflow-hidden">
                         <img src="${item.src}" class="max-w-full max-h-[340px] w-auto h-auto object-contain rounded" />
@@ -7157,7 +7155,7 @@ function buildEndorsementAttachmentsHtml() {
     return flattenedItems.map((item, idx) => `
         <div class="report-a4-page report-page-break" style="justify-content: flex-start; gap: 14px;">
             <div class="border-b border-slate-300 pb-1.5 flex items-center justify-between">
-                <span class="text-xs font-extrabold uppercase tracking-wider text-slate-800">Attachment #${idx + 1}</span>
+                <span class="text-xs font-extrabold uppercase tracking-wider text-slate-800">Attachment #${idx + 1}: ${escapeHtml(item.label)}</span>
                 <span class="text-[10px] font-mono text-slate-500">Supporting Document</span>
             </div>
             <div class="flex-1 flex items-center justify-center">
@@ -7330,10 +7328,10 @@ function closeEndorseModal(discardDraft = false) {
 
 function closeEndorsePreviewModal() {
     setEndorsementEditState(false);
-    document.getElementById('endorsePreviewModal').style.display = 'none';
-    const endorseModal = document.getElementById('endorseModal');
-    if (endorseModal) {
-        endorseModal.style.display = 'flex';
+    const modal = document.getElementById('endorsePreviewModal');
+    if (modal) {
+        delete modal.dataset.previewSource;
+        modal.style.display = 'none';
     }
 }
 
@@ -7341,11 +7339,16 @@ function printEndorsementLetter() {
     if (isEndorseLetterEditing) {
         setEndorsementEditState(false);
     }
-    document.body.classList.add('printing-endorse');
+    const modal = document.getElementById('endorsePreviewModal');
+    const sourceMode = modal?.dataset?.previewSource || 'endorse';
+    const printClass = sourceMode === 'report'
+        ? 'printing-report'
+        : (sourceMode === 'master-landscape' ? 'printing-report printing-master-landscape' : 'printing-endorse');
+    printClass.split(' ').forEach(c => document.body.classList.add(c));
     setTimeout(() => {
         window.print();
         setTimeout(() => {
-            document.body.classList.remove('printing-endorse');
+            printClass.split(' ').forEach(c => document.body.classList.remove(c));
         }, 350);
     }, 150);
 }
@@ -7440,7 +7443,9 @@ function generateEndorsementLetter(e) {
     });
 
     const fontClass = fontFamily === 'font-serif' ? 'font-serif' : 'font-sans';
-    document.getElementById('endorseLetterPrintArea').innerHTML = `
+    const printArea = document.getElementById('endorseLetterPrintArea');
+    printArea.className = '';
+    printArea.innerHTML = `
         <div class="report-a4-page ${fontClass}" style="justify-content: flex-start; padding: 20mm 22mm;">
             ${letterBodyHtml}
         </div>
@@ -7449,7 +7454,9 @@ function generateEndorsementLetter(e) {
 
     setEndorsementEditState(false);
     document.getElementById('endorseModal').style.display = 'none';
-    document.getElementById('endorsePreviewModal').style.display = 'flex';
+    const previewModal = document.getElementById('endorsePreviewModal');
+    previewModal.dataset.previewSource = 'endorse';
+    previewModal.style.display = 'flex';
 }
 
 document.addEventListener('DOMContentLoaded', () => {
