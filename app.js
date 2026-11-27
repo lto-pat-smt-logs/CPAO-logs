@@ -3147,7 +3147,7 @@ function openSettingModal(type, index, groupName = null) {
         }
         container.innerHTML = `
             <div><label class="block text-slate-400 text-[10px] font-bold uppercase mb-1">Platform Name</label><input type="text" id="modalPlatformName" value="${escapeHtml(pName)}" required class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-white"></div>
-            <div><label class="block text-slate-400 text-[10px] font-bold uppercase mb-1">Ticket Prefix</label><input type="text" id="modalPlatformPrefix" value="${escapeHtml(pPrefix)}" required class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-amber-400 font-mono"></div>
+            <div><label class="block text-slate-400 text-[10px] font-bold uppercase mb-1">Ticket Prefix (Optional)</label><input type="text" id="modalPlatformPrefix" value="${escapeHtml(pPrefix)}" placeholder="Optional (e.g., CPAO)" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-amber-400 font-mono"></div>
             <div><label class="flex items-center gap-2 text-xs font-bold text-sky-400"><input type="checkbox" id="modalPlatformAutoGen" ${pAuto ? 'checked' : ''}> Auto-Generate Ticket Number</label></div>
         `;
     } else if (type === 'categories') {
@@ -6442,73 +6442,104 @@ async function deleteAllLogsForSelectedDate() {
         return;
     }
 
-    const enteredPass = window.prompt(
-        `Enter Super Admin password to delete ALL ${matchingIndices.length} ticket log(s) for ${filterMDY || dateFilter}:`
-    );
-    if (enteredPass === null) return;
+    const sysModal = document.getElementById('systemModal');
+    const sysTitle = document.getElementById('systemModalTitleText');
+    const sysIcon = document.getElementById('systemModalIcon');
+    const sysMsg = document.getElementById('systemModalMessage');
+    const sysBtns = document.getElementById('systemModalButtons');
+    if (!sysModal || !sysTitle || !sysIcon || !sysMsg || !sysBtns) return;
 
-    const accountRecord = (AppState.users || []).find(
-        u => String(u.username || '').trim().toLowerCase() === String(currentUser.username || '').trim().toLowerCase()
-    );
-    const expectedPass = String((accountRecord && (accountRecord.pass ?? accountRecord.password)) ?? currentUser.pass ?? '');
+    sysTitle.textContent = "Super Admin Verification Required";
+    sysIcon.textContent = "🔒";
+    sysMsg.textContent = `Enter your Super Admin password to delete ALL ${matchingIndices.length} ticket log(s) for ${filterMDY || dateFilter}. This action cannot be undone.`;
+    sysBtns.innerHTML = `
+        <div class="w-full space-y-3">
+            <input type="password" id="systemBulkDeletePasswordInput" autocomplete="current-password" placeholder="Enter Super Admin password..." class="w-full bg-slate-950 border border-slate-700 focus:border-sky-500 rounded-lg px-3 py-2 text-xs text-white outline-none" />
+            <div class="flex justify-end gap-2">
+                <button type="button" onclick="closeSystemModal()" class="px-4 py-2 text-xs text-slate-300 bg-slate-800 hover:bg-slate-700 rounded font-semibold cursor-pointer">Cancel</button>
+                <button type="button" id="systemVerifyBulkDeleteBtn" class="px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 rounded shadow cursor-pointer">Confirm Delete</button>
+            </div>
+        </div>
+    `;
+    sysModal.style.display = 'flex';
 
-    if (!expectedPass || enteredPass !== expectedPass) {
-        showSystemAlert("Authentication Failed", "Incorrect Super Admin password. Bulk delete cancelled.", "🔒");
-        return;
-    }
+    const passInput = document.getElementById('systemBulkDeletePasswordInput');
+    const verifyBtn = document.getElementById('systemVerifyBulkDeleteBtn');
 
-    showSystemConfirm(
-        "Delete All Logs for Date",
-        `Are you sure you want to delete ALL ${matchingIndices.length} ticket log(s) for ${filterMDY || dateFilter}? This action cannot be undone.`,
-        async () => {
-            matchingIndices.sort((a, b) => b - a);
-            const deletedItems = [];
-            for (const idx of matchingIndices) {
-                const removed = AppState.tickets[idx];
-                if (removed) {
-                    deletedItems.push({
-                        rowIndex: removed.rowIndex || (idx + 2),
-                        referralNo: removed.referralNo,
-                        clientKey: `${String(removed.referralNo || '').trim().toLowerCase()}|${String(removed.dateReceived || '').trim()}|${String(removed.complainantName || '').trim().toLowerCase()}`
-                    });
-                    removePendingTicketSync(deletedItems[deletedItems.length - 1].clientKey);
-                    AppState.tickets.splice(idx, 1);
-                }
+    const submitBulkDelete = async () => {
+        const enteredPass = String(passInput?.value ?? '');
+        const accountRecord = (AppState.users || []).find(
+            u => String(u.username || '').trim().toLowerCase() === String(currentUser.username || '').trim().toLowerCase()
+        );
+        const expectedPass = String((accountRecord && (accountRecord.pass ?? accountRecord.password)) ?? currentUser.pass ?? '');
+
+        if (!expectedPass || enteredPass !== expectedPass) {
+            closeSystemModal();
+            showSystemAlert("Authentication Failed", "Incorrect Super Admin password. Bulk delete cancelled.", "🔒");
+            return;
+        }
+
+        closeSystemModal();
+        matchingIndices.sort((a, b) => b - a);
+        const deletedItems = [];
+        for (const idx of matchingIndices) {
+            const removed = AppState.tickets[idx];
+            if (removed) {
+                deletedItems.push({
+                    rowIndex: removed.rowIndex || (idx + 2),
+                    referralNo: removed.referralNo,
+                    clientKey: `${String(removed.referralNo || '').trim().toLowerCase()}|${String(removed.dateReceived || '').trim()}|${String(removed.complainantName || '').trim().toLowerCase()}`
+                });
+                removePendingTicketSync(deletedItems[deletedItems.length - 1].clientKey);
+                AppState.tickets.splice(idx, 1);
             }
-            saveStorage();
-            renderTable();
-            updateKPIs();
-            render24HourReminderBanner();
+        }
+        saveStorage();
+        renderTable();
+        updateKPIs();
+        render24HourReminderBanner();
 
-            let anyFailed = false;
-            for (const item of deletedItems) {
-                try {
-                    const response = await fetchWithRetry(getActiveSettingsAppsScriptUrl(), {
-                        method: "POST",
-                        headers: { "Content-Type": "text/plain;charset=utf-8" },
-                        body: JSON.stringify({
-                            action: "deleteLog",
-                            sheet: getActiveLogsWorksheetName(),
-                            rowIndex: item.rowIndex,
-                            row: item.rowIndex,
-                            referralNo: item.referralNo,
-                            ticketNo: item.referralNo
-                        })
-                    }, 2);
-                    const rawText = await response.text();
-                    let resData = {};
-                    try { resData = rawText ? JSON.parse(rawText) : {}; } catch (e) { resData = {}; }
-                    if (resData && (resData.error || resData.success === false)) {
-                        anyFailed = true;
-                    }
-                } catch (e) {
+        let anyFailed = false;
+        for (const item of deletedItems) {
+            try {
+                const response = await fetchWithRetry(getActiveSettingsAppsScriptUrl(), {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify({
+                        action: "deleteLog",
+                        sheet: getActiveLogsWorksheetName(),
+                        rowIndex: item.rowIndex,
+                        row: item.rowIndex,
+                        referralNo: item.referralNo,
+                        ticketNo: item.referralNo
+                    })
+                }, 2);
+                const rawText = await response.text();
+                let resData = {};
+                try { resData = rawText ? JSON.parse(rawText) : {}; } catch (e) { resData = {}; }
+                if (resData && (resData.error || resData.success === false)) {
                     anyFailed = true;
                 }
+            } catch (e) {
+                anyFailed = true;
             }
-            updateSyncStatusBadge(anyFailed ? "error" : (loadPendingSyncQueue().length > 0 ? "queued" : "synced"));
-            showToast(anyFailed ? "Some logs removed locally; cloud delete had errors." : `Deleted ${deletedItems.length} log(s) for ${filterMDY || dateFilter}.`);
         }
-    );
+        updateSyncStatusBadge(anyFailed ? "error" : (loadPendingSyncQueue().length > 0 ? "queued" : "synced"));
+        showToast(anyFailed ? "Some logs removed locally; cloud delete had errors." : `Deleted ${deletedItems.length} log(s) for ${filterMDY || dateFilter}.`);
+    };
+
+    if (verifyBtn) {
+        verifyBtn.onclick = submitBulkDelete;
+    }
+    if (passInput) {
+        passInput.onkeydown = (ev) => {
+            if (ev.key === 'Enter') {
+                ev.preventDefault();
+                submitBulkDelete();
+            }
+        };
+        setTimeout(() => passInput.focus(), 30);
+    }
 }
 
 function updateKPIs() {
@@ -7061,7 +7092,7 @@ function buildEndorsementAttachmentsHtml() {
     endorseAttachments.forEach((att, attIdx) => {
         const pages = Array.isArray(att.pages) && att.pages.length > 0 ? att.pages : (att.dataUrl ? [att.dataUrl] : []);
         pages.forEach((imgUrl, pIdx) => {
-            const pageLabel = pages.length > 1 ? `${att.name} (Page ${pIdx + 1} of ${pages.length})` : att.name;
+            const pageLabel = pages.length > 1 ? `Attachment #${attIdx + 1} (Page ${pIdx + 1} of ${pages.length})` : `Attachment #${attIdx + 1}`;
             flattenedItems.push({
                 order: attIdx + 1,
                 label: pageLabel,
@@ -7076,7 +7107,7 @@ function buildEndorsementAttachmentsHtml() {
         const stackedCards = flattenedItems.map((item, idx) => `
             <div class="border border-slate-300 rounded-lg p-2.5 bg-white space-y-1.5">
                 <div class="flex items-center justify-between text-[10px] font-bold text-slate-600 border-b border-slate-200 pb-1">
-                    <span>Attachment #${idx + 1}: ${escapeHtml(item.label)}</span>
+                    <span>Attachment #${idx + 1}</span>
                 </div>
                 <div class="flex justify-center">
                     <img src="${item.src}" class="max-w-full max-h-[260px] w-auto h-auto object-contain rounded" />
@@ -7102,7 +7133,7 @@ function buildEndorsementAttachmentsHtml() {
             const pairCards = pair.map((item, idxInPair) => `
                 <div class="border border-slate-300 rounded-lg p-3 bg-white flex-1 flex flex-col justify-between gap-2">
                     <div class="text-[10px] font-bold text-slate-700 border-b border-slate-200 pb-1">
-                        Attachment #${i + idxInPair + 1}: ${escapeHtml(item.label)}
+                        Attachment #${i + idxInPair + 1}
                     </div>
                     <div class="flex-1 flex items-center justify-center overflow-hidden">
                         <img src="${item.src}" class="max-w-full max-h-[340px] w-auto h-auto object-contain rounded" />
@@ -7126,7 +7157,7 @@ function buildEndorsementAttachmentsHtml() {
     return flattenedItems.map((item, idx) => `
         <div class="report-a4-page report-page-break" style="justify-content: flex-start; gap: 14px;">
             <div class="border-b border-slate-300 pb-1.5 flex items-center justify-between">
-                <span class="text-xs font-extrabold uppercase tracking-wider text-slate-800">Attachment #${idx + 1}: ${escapeHtml(item.label)}</span>
+                <span class="text-xs font-extrabold uppercase tracking-wider text-slate-800">Attachment #${idx + 1}</span>
                 <span class="text-[10px] font-mono text-slate-500">Supporting Document</span>
             </div>
             <div class="flex-1 flex items-center justify-center">
@@ -7300,6 +7331,10 @@ function closeEndorseModal(discardDraft = false) {
 function closeEndorsePreviewModal() {
     setEndorsementEditState(false);
     document.getElementById('endorsePreviewModal').style.display = 'none';
+    const endorseModal = document.getElementById('endorseModal');
+    if (endorseModal) {
+        endorseModal.style.display = 'flex';
+    }
 }
 
 function printEndorsementLetter() {
