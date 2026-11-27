@@ -52,6 +52,21 @@
         page-break-inside: auto;
     }
 }
+
+#viewSettings .settings-searchable-card,
+#viewSettings .glass-panel,
+#viewUsers .glass-panel {
+    overflow: visible !important;
+}
+#viewSettings label,
+#viewSettings button,
+#viewSettings span,
+#viewUsers td,
+#viewUsers th {
+    white-space: normal !important;
+    word-break: break-word;
+}
+
 </style>
 </head>
 <body class="min-h-screen flex flex-col selection:bg-sky-500 selection:text-white">
@@ -578,16 +593,16 @@
                 </div>
             </div>
 
-            <div role="tablist" aria-label="Settings Sections" class="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-800/80">
-                <button type="button" role="tab" aria-selected="true" id="settingsSubTab_all" onclick="selectSettingsSection('all')" class="px-3 py-1.5 rounded-lg text-xs font-extrabold bg-sky-600 text-white shadow transition whitespace-nowrap cursor-pointer">All Sections</button>
-                <button type="button" role="tab" aria-selected="false" id="settingsSubTab_profile" onclick="selectSettingsSection('profile')" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition whitespace-nowrap cursor-pointer">👤 Profile</button>
-                <button type="button" role="tab" aria-selected="false" id="settingsSubTab_preferences" onclick="selectSettingsSection('preferences')" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition whitespace-nowrap cursor-pointer">🎛️ Preferences</button>
-                <button type="button" role="tab" aria-selected="false" id="settingsSubTab_notifications" onclick="selectSettingsSection('notifications')" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition whitespace-nowrap cursor-pointer">🔔 Notifications</button>
-                <button type="button" role="tab" aria-selected="false" id="settingsSubTab_security" onclick="selectSettingsSection('security')" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition whitespace-nowrap cursor-pointer">🔐 Security</button>
-                <button type="button" role="tab" aria-selected="false" id="settingsSubTab_integrations" onclick="selectSettingsSection('integrations')" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition whitespace-nowrap cursor-pointer">🔗 Integrations</button>
-                <button type="button" role="tab" aria-selected="false" id="settingsSubTab_reportcols" onclick="selectSettingsSection('reportcols')" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition whitespace-nowrap cursor-pointer">📊 Report Columns</button>
-                <button type="button" role="tab" aria-selected="false" id="settingsSubTab_signatories" onclick="selectSettingsSection('signatories')" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition whitespace-nowrap cursor-pointer">✍️ Signatory Block</button>
-                <button type="button" role="tab" aria-selected="false" id="settingsSubTab_dropdowns" onclick="selectSettingsSection('dropdowns')" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition whitespace-nowrap cursor-pointer">🧩 Dropdowns &amp; Categories</button>
+            <div role="tablist" aria-label="Settings Sections" class="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-800/80 overflow-visible">
+                <button type="button" role="tab" aria-selected="true" id="settingsSubTab_all" onclick="selectSettingsSection('all')" class="px-2.5 py-1.5 rounded-lg text-[11px] font-extrabold bg-sky-600 text-white shadow transition cursor-pointer">All</button>
+                <button type="button" role="tab" aria-selected="false" id="settingsSubTab_profile" onclick="selectSettingsSection('profile')" class="px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition cursor-pointer">👤 Profile</button>
+                <button type="button" role="tab" aria-selected="false" id="settingsSubTab_preferences" onclick="selectSettingsSection('preferences')" class="px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition cursor-pointer">🎛️ Preferences</button>
+                <button type="button" role="tab" aria-selected="false" id="settingsSubTab_notifications" onclick="selectSettingsSection('notifications')" class="px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition cursor-pointer">🔔 Alerts</button>
+                <button type="button" role="tab" aria-selected="false" id="settingsSubTab_security" onclick="selectSettingsSection('security')" class="px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition cursor-pointer">🔐 Security</button>
+                <button type="button" role="tab" aria-selected="false" id="settingsSubTab_integrations" onclick="selectSettingsSection('integrations')" class="px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition cursor-pointer">🔗 Integrations</button>
+                <button type="button" role="tab" aria-selected="false" id="settingsSubTab_reportcols" onclick="selectSettingsSection('reportcols')" class="px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition cursor-pointer">📊 Report Headers</button>
+                <button type="button" role="tab" aria-selected="false" id="settingsSubTab_signatories" onclick="selectSettingsSection('signatories')" class="px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition cursor-pointer">✍️ Signatories</button>
+                <button type="button" role="tab" aria-selected="false" id="settingsSubTab_dropdowns" onclick="selectSettingsSection('dropdowns')" class="px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition cursor-pointer">🧩 Dropdowns</button>
             </div>
 
             <div id="settingsFeedbackBanner" class="hidden px-3.5 py-2.5 rounded-xl text-xs font-semibold border flex items-center justify-between gap-2"></div>

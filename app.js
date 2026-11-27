@@ -545,8 +545,8 @@ function selectSettingsSection(sectionKey) {
             const active = activeSettingsSection === sec;
             tab.setAttribute("aria-selected", active ? "true" : "false");
             tab.className = active
-                ? "px-3 py-1.5 rounded-lg text-xs font-extrabold bg-sky-600 text-white shadow transition whitespace-nowrap cursor-pointer"
-                : "px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition whitespace-nowrap cursor-pointer";
+                ? "px-2.5 py-1.5 rounded-lg text-[11px] font-extrabold bg-sky-600 text-white shadow transition cursor-pointer"
+                : "px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition cursor-pointer";
         }
     });
     const allTab = document.getElementById("settingsSubTab_all");
@@ -554,8 +554,8 @@ function selectSettingsSection(sectionKey) {
         const active = activeSettingsSection === "all";
         allTab.setAttribute("aria-selected", active ? "true" : "false");
         allTab.className = active
-            ? "px-3 py-1.5 rounded-lg text-xs font-extrabold bg-sky-600 text-white shadow transition whitespace-nowrap cursor-pointer"
-            : "px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition whitespace-nowrap cursor-pointer";
+            ? "px-2.5 py-1.5 rounded-lg text-[11px] font-extrabold bg-sky-600 text-white shadow transition cursor-pointer"
+            : "px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition cursor-pointer";
     }
 }
 
@@ -997,12 +997,9 @@ function printReportDocument() {
     const previewModal = document.getElementById("endorsePreviewModal");
     if (target && sourceRoot) {
         const clonedRoot = sourceRoot.cloneNode(true);
-        const landscapeNodes = Array.from(clonedRoot.querySelectorAll(".report-landscape-page"));
-        landscapeNodes.forEach(n => n.remove());
-
-        const portraitHtml = `<div class="report-a4-page">${clonedRoot.innerHTML}</div>`;
-        target.className = "w-full max-w-[900px]";
-        target.innerHTML = portraitHtml;
+        const fullReportHtml = `<div class="report-a4-page">${clonedRoot.innerHTML}</div>`;
+        target.className = "w-full max-w-[1240px]";
+        target.innerHTML = fullReportHtml;
     }
     setEndorsementEditState(false);
     if (previewModal) {
@@ -2115,8 +2112,8 @@ async function syncSharedCloudSettingsQuietly() {
                 const cloudUpdatedAt = Number(cloudSettings?._settingsUpdatedAt || 0);
                 const prevSheet = getActiveLogsWorksheetName();
                 const cloudSheetVal = String(cloudSettings?.integrations?.logsWorksheetName || "").trim();
-                const sheetDiffers = !!(cloudSheetVal && cloudSheetVal !== prevSheet);
-                if (sheetDiffers || cloudUpdatedAt > localUpdatedAt || (cloudUpdatedAt === 0 && cloudSheetVal && cloudSheetVal !== prevSheet)) {
+                const hasSharedLogsTabUpdate = !!(cloudSheetVal && cloudSheetVal !== prevSheet);
+                if (hasSharedLogsTabUpdate || cloudUpdatedAt >= localUpdatedAt || localUpdatedAt === 0 || cloudUpdatedAt === 0) {
                     AppState.settings = mergeSettingsSafely(AppState.settings, cloudSettings, true);
                     if (cloudSheetVal) {
                         AppState.settings.integrations.logsWorksheetName = cloudSheetVal;
