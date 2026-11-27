@@ -985,6 +985,58 @@ function toggleEditReportPreview() {
     showToast(isReportPreviewEditing ? "Report editing enabled — click directly on text to edit." : "Report edits applied.");
 }
 
+function getSelectedReportPaperSize() {
+    const sel = document.getElementById("repPaperSize") || document.getElementById("previewPaperSize");
+    const val = String(sel?.value || "letter").toLowerCase().trim();
+    const allowed = ["letter", "long", "legal", "a4", "a3"];
+    return allowed.includes(val) ? val : "letter";
+}
+
+function getCssPageSizeRule(paperKey) {
+    switch (paperKey) {
+        case "long":
+            return "8.5in 13in portrait";
+        case "legal":
+            return "8.5in 14in portrait";
+        case "a4":
+            return "A4 portrait";
+        case "a3":
+            return "A3 portrait";
+        case "letter":
+        default:
+            return "letter portrait";
+    }
+}
+
+function applyPrintPaperSize(paperKey) {
+    const normalized = String(paperKey || getSelectedReportPaperSize()).toLowerCase().trim();
+    const repSel = document.getElementById("repPaperSize");
+    const prevSel = document.getElementById("previewPaperSize");
+    if (repSel && repSel.value !== normalized) repSel.value = normalized;
+    if (prevSel && prevSel.value !== normalized) prevSel.value = normalized;
+
+    let styleTag = document.getElementById("dynamicPrintPageSizeStyle");
+    if (!styleTag) {
+        styleTag = document.createElement("style");
+        styleTag.id = "dynamicPrintPageSizeStyle";
+        document.head.appendChild(styleTag);
+    }
+
+    const cssSize = getCssPageSizeRule(normalized);
+    styleTag.textContent = `
+        @media print {
+            @page {
+                size: ${cssSize};
+                margin: 10mm;
+            }
+            @page landscapePage {
+                size: landscape;
+                margin: 10mm;
+            }
+        }
+    `;
+}
+
 function printReportDocument() {
     if (!canUserGenerateReports()) return;
     const docEl = document.getElementById("printableReportDocument");
@@ -992,12 +1044,18 @@ function printReportDocument() {
         generateReport();
     }
     if (isReportPreviewEditing) setReportPreviewEditState(false);
+
+    applyPrintPaperSize(getSelectedReportPaperSize());
+
     const sourceRoot = document.getElementById("printableReportDocument");
     const target = document.getElementById("endorseLetterPrintArea");
     const previewModal = document.getElementById("endorsePreviewModal");
     if (target && sourceRoot) {
         const clonedRoot = sourceRoot.cloneNode(true);
-        const fullReportHtml = `<div class="report-a4-page">${clonedRoot.innerHTML}</div>`;
+        const landscapePages = Array.from(clonedRoot.querySelectorAll(".report-landscape-page"));
+        landscapePages.forEach(lp => lp.parentNode && lp.parentNode.removeChild(lp));
+
+        const fullReportHtml = `<div class="report-a4-page">${clonedRoot.innerHTML}</div>` + landscapePages.map(lp => lp.outerHTML).join("");
         target.className = "w-full max-w-[1240px]";
         target.innerHTML = fullReportHtml;
     }
@@ -3364,8 +3422,10 @@ async function saveSettingItemForm(e) {
     renderSettingsTables();
     populateDropdowns();
     populateReportFilterDropdowns();
-    if (document.getElementById('viewReports')?.style.display !== 'none') {
-        generateReport();
+    generateReport();
+    const _pm1 = document.getElementById('endorsePreviewModal');
+    if (_pm1 && _pm1.style.display === 'flex' && _pm1.dataset.previewSource === 'report') {
+        printReportDocument();
     }
     closeSettingModal();
     setSettingsFeedbackBanner("Syncing updated setting to Google Sheets...", "saving");
@@ -3393,8 +3453,10 @@ function deleteSettingItem(type, index, groupName = null) {
         renderSettingsTables();
         populateDropdowns();
         populateReportFilterDropdowns();
-        if (document.getElementById('viewReports')?.style.display !== 'none') {
-            generateReport();
+        generateReport();
+        const _pm2 = document.getElementById('endorsePreviewModal');
+        if (_pm2 && _pm2.style.display === 'flex' && _pm2.dataset.previewSource === 'report') {
+            printReportDocument();
         }
         showToast("Item deleted successfully.");
         saveAllSettingsToCloud(true);
@@ -6047,6 +6109,31 @@ function saveTicketForm(e) {
         is24Hours: is24hChecked,
         extraData
     };
+
+    const compTrimmed = String(newTicket.complainantName || '').trim().toLowerCase();
+    const catTrimmed = String(newTicket.category || '').trim().toLowerCase();
+    if (compTrimmed && catTrimmed) {
+        const sameConcernIdx = AppState.tickets.findIndex((item, i) => {
+            if (isEditing && i === idx) return false;
+            const itemComp = String(item?.complainantName || '').trim().toLowerCase();
+            const itemCat = String(item?.category || '').trim().toLowerCase();
+            return itemComp === compTrimmed && itemCat === catTrimmed;
+        });
+        if (sameConcernIdx !== -1) {
+            const existing = AppState.tickets[sameConcernIdx];
+            pendingTicketSubmission = { newTicket, isEditing, idx };
+            document.getElementById('dupExistingInfo').innerHTML = `
+                <div class="text-amber-300 font-bold mb-1">⚠️ Existing Complainant with Same Concern Found</div>
+                <strong>Complainant:</strong> ${escapeHtml(existing.complainantName || '—')}<br>
+                <strong>Same Category / Concern:</strong> <span class="text-sky-300 font-semibold">${escapeHtml(existing.category || '—')}</span><br>
+                <strong>Existing Ticket #:</strong> <span class="font-mono text-amber-300">${escapeHtml(existing.referralNo || '—')}</span><br>
+                <strong>Date Received:</strong> <span class="font-mono">${escapeHtml(existing.dateReceived || '—')}</span><br>
+                <strong>Status:</strong> ${escapeHtml(existing.status || '—')}
+            `;
+            document.getElementById('duplicateWarningModal').style.display = 'flex';
+            return;
+        }
+    }
 
     if (!isEditing && refNoTrimmed) {
         const dupIdx = AppState.tickets.findIndex(item => String(item.referralNo || '').trim().toLowerCase() === refNoTrimmed.toLowerCase());

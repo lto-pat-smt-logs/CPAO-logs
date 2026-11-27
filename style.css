@@ -218,7 +218,58 @@ body.light-mode .glass-panel {
 
 @media print {
     .no-print { display: none !important; }
-    body { background: #ffffff !important; color: #0f172a !important; }
-    .report-a4-page { box-shadow: none !important; max-width: none !important; padding: 12mm !important; }
-    .report-page-break { page-break-before: always; break-before: page; }
+    body {
+        background: #ffffff !important;
+        color: #0f172a !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    .report-a4-page {
+        box-shadow: none !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        padding: 10mm !important;
+        box-sizing: border-box;
+    }
+    .report-page-break {
+        page-break-before: always;
+        break-before: page;
+    }
+    .report-landscape-page {
+        page: landscapePage;
+        page-break-before: always;
+        break-before: page;
+        page-break-after: always;
+        break-after: page;
+        max-width: 100% !important;
+        width: 100% !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        padding: 8mm 10mm !important;
+        box-sizing: border-box;
+    }
+    .report-summary-table {
+        width: 100% !important;
+        table-layout: auto;
+        word-break: break-word;
+    }
+    .report-summary-table th,
+    .report-summary-table td {
+        word-break: break-word;
+    }
+}
+
+.report-landscape-page {
+    width: 100%;
+    max-width: 1240px;
+    background: #ffffff;
+    color: #0f172a;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 10px 30px rgba(2, 6, 23, 0.25);
+}
+
+@page landscapePage {
+    size: landscape;
+    margin: 10mm;
 }

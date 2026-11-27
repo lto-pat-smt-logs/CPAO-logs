@@ -319,6 +319,16 @@
                 <button type="button" id="btnToggleEditReportPreview" onclick="toggleEditReportPreview()" class="px-3 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-bold cursor-pointer">✏️ Edit Report</button>
                 <button type="button" onclick="exportReportCSV()" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold cursor-pointer">📥 Export CSV</button>
                 <button type="button" onclick="printMasterListLandscape()" class="px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold cursor-pointer">📄 Print Master List (Landscape)</button>
+                <div class="flex items-center gap-1.5">
+                    <label for="repPaperSize" class="text-[10px] font-bold uppercase text-slate-400">Paper:</label>
+                    <select id="repPaperSize" onchange="applyPrintPaperSize(this.value)" class="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1.5 text-xs font-bold text-sky-300">
+                        <option value="letter" selected>Letter (8.5x11)</option>
+                        <option value="long">Long (8.5x13)</option>
+                        <option value="legal">Legal (8.5x14)</option>
+                        <option value="a4">A4 (8.27x11.69)</option>
+                        <option value="a3">A3 (11.69x16.54)</option>
+                    </select>
+                </div>
                 <button type="button" onclick="printReportDocument()" class="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold cursor-pointer">🖨️ Print / PDF</button>
             </div>
         </div>
@@ -1179,6 +1189,13 @@
                 <span id="endorseEditModeBadge" class="hidden px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-extrabold uppercase">Editing</span>
             </div>
             <div class="flex items-center gap-2">
+                <select id="previewPaperSize" onchange="applyPrintPaperSize(this.value)" class="bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs font-bold text-sky-300">
+                    <option value="letter" selected>Letter (8.5x11)</option>
+                    <option value="long">Long (8.5x13)</option>
+                    <option value="legal">Legal (8.5x14)</option>
+                    <option value="a4">A4 (8.27x11.69)</option>
+                    <option value="a3">A3 (11.69x16.54)</option>
+                </select>
                 <button type="button" id="btnToggleEditEndorseLetter" onclick="toggleEditEndorsementLetter()" class="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded shadow text-xs transition cursor-pointer">✏️ Edit Letter</button>
                 <button type="button" onclick="printEndorsementLetter()" class="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-extrabold rounded shadow text-xs transition cursor-pointer">🖨️ Print / Save PDF</button>
             </div>
