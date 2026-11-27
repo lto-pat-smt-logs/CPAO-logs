@@ -100,36 +100,36 @@
         </div>
     </div>
 
-    <nav aria-label="Primary Workspace Tabs" role="tablist" class="max-w-[1600px] mx-auto mt-3 pt-2 border-t border-slate-800/80 flex items-center gap-1 overflow-x-auto">
-        <button type="button" role="tab" aria-selected="true" id="tabBtnLogs" onclick="switchMainTab('logs')" class="px-3.5 py-2 text-xs font-bold text-sky-400 border-b-2 border-sky-400 flex items-center gap-1.5 whitespace-nowrap transition cursor-pointer">
-            <span>📋</span> <span>PAT/SMT Logs Sheet</span>
+    <nav aria-label="Primary Workspace Tabs" role="tablist" class="max-w-[1600px] mx-auto mt-3 pt-2 border-t border-slate-800/80 flex items-center gap-1.5 overflow-x-auto">
+        <button type="button" role="tab" aria-selected="true" id="tabBtnLogs" onclick="switchMainTab('logs')" title="PAT/SMT Logs Sheet" aria-label="PAT/SMT Logs Sheet" class="px-3.5 py-2 text-base font-bold text-sky-400 border-b-2 border-sky-400 flex items-center justify-center whitespace-nowrap transition cursor-pointer">
+            <span>📋</span>
         </button>
-        <button type="button" role="tab" aria-selected="false" id="tabBtnAccomplishment" onclick="switchMainTab('accomplishment')" class="px-3.5 py-2 text-xs font-bold text-slate-400 hover:text-white border-b-2 border-transparent flex items-center gap-1.5 whitespace-nowrap transition cursor-pointer">
-            <span>🏅</span> <span>Accomplishment Report</span>
+        <button type="button" role="tab" aria-selected="false" id="tabBtnAccomplishment" onclick="switchMainTab('accomplishment')" title="Accomplishment Report" aria-label="Accomplishment Report" class="px-3.5 py-2 text-base font-bold text-slate-400 hover:text-white border-b-2 border-transparent flex items-center justify-center whitespace-nowrap transition cursor-pointer">
+            <span>🏅</span>
         </button>
-        <button type="button" role="tab" aria-selected="false" id="tabBtnReports" onclick="switchMainTab('reports')" class="px-3.5 py-2 text-xs font-bold text-slate-400 hover:text-white border-b-2 border-transparent flex items-center gap-1.5 whitespace-nowrap transition cursor-pointer">
-            <span>📈</span> <span>Reports &amp; Analytics</span>
+        <button type="button" role="tab" aria-selected="false" id="tabBtnReports" onclick="switchMainTab('reports')" title="Reports &amp; Analytics" aria-label="Reports &amp; Analytics" class="px-3.5 py-2 text-base font-bold text-slate-400 hover:text-white border-b-2 border-transparent flex items-center justify-center whitespace-nowrap transition cursor-pointer">
+            <span>📈</span>
         </button>
-        <button type="button" role="tab" aria-selected="false" id="tabBtnWorkflow" onclick="switchMainTab('workflow')" class="px-3.5 py-2 text-xs font-bold text-slate-400 hover:text-white border-b-2 border-transparent flex items-center gap-1.5 whitespace-nowrap transition cursor-pointer">
-            <span>🧭</span> <span>Workflow Guide</span>
+        <button type="button" role="tab" aria-selected="false" id="tabBtnWorkflow" onclick="switchMainTab('workflow')" title="Workflow Guide" aria-label="Workflow Guide" class="px-3.5 py-2 text-base font-bold text-slate-400 hover:text-white border-b-2 border-transparent flex items-center justify-center whitespace-nowrap transition cursor-pointer">
+            <span>🧭</span>
         </button>
-        <button type="button" role="tab" aria-selected="false" id="tabBtnClipboard" onclick="switchMainTab('clipboard')" class="px-3.5 py-2 text-xs font-bold text-slate-400 hover:text-white border-b-2 border-transparent flex items-center gap-1.5 whitespace-nowrap transition cursor-pointer">
-            <span>💬</span> <span>Responder Clipboard</span>
+        <button type="button" role="tab" aria-selected="false" id="tabBtnClipboard" onclick="switchMainTab('clipboard')" title="Responder Clipboard" aria-label="Responder Clipboard" class="px-3.5 py-2 text-base font-bold text-slate-400 hover:text-white border-b-2 border-transparent flex items-center justify-center whitespace-nowrap transition cursor-pointer">
+            <span>💬</span>
         </button>
-        <button type="button" role="tab" aria-selected="false" id="tabBtnWorkday" onclick="switchMainTab('workday')" class="px-3.5 py-2 text-xs font-bold text-slate-400 hover:text-white border-b-2 border-transparent flex items-center gap-1.5 whitespace-nowrap transition cursor-pointer">
-            <span>🗓️</span> <span>20-Day Workday Calc</span>
+        <button type="button" role="tab" aria-selected="false" id="tabBtnWorkday" onclick="switchMainTab('workday')" title="20-Day Workday Calc" aria-label="20-Day Workday Calc" class="px-3.5 py-2 text-base font-bold text-slate-400 hover:text-white border-b-2 border-transparent flex items-center justify-center whitespace-nowrap transition cursor-pointer">
+            <span>🗓️</span>
         </button>
-        <button type="button" role="tab" aria-selected="false" id="tabBtnDirectory" onclick="switchMainTab('directory')" class="px-3.5 py-2 text-xs font-bold text-slate-400 hover:text-white border-b-2 border-transparent flex items-center gap-1.5 whitespace-nowrap transition cursor-pointer">
-            <span>🏛️</span> <span>LTO Directory</span>
+        <button type="button" role="tab" aria-selected="false" id="tabBtnDirectory" onclick="switchMainTab('directory')" title="LTO Directory" aria-label="LTO Directory" class="px-3.5 py-2 text-base font-bold text-slate-400 hover:text-white border-b-2 border-transparent flex items-center justify-center whitespace-nowrap transition cursor-pointer">
+            <span>🏛️</span>
         </button>
-        <button type="button" role="tab" aria-selected="false" id="tabBtnTemplate" onclick="switchMainTab('template')" class="px-3.5 py-2 text-xs font-bold text-slate-400 hover:text-white border-b-2 border-transparent flex items-center gap-1.5 whitespace-nowrap transition cursor-pointer">
-            <span>✉️</span> <span>Endorsement Template</span>
+        <button type="button" role="tab" aria-selected="false" id="tabBtnTemplate" onclick="switchMainTab('template')" title="Endorsement Template" aria-label="Endorsement Template" class="px-3.5 py-2 text-base font-bold text-slate-400 hover:text-white border-b-2 border-transparent flex items-center justify-center whitespace-nowrap transition cursor-pointer">
+            <span>✉️</span>
         </button>
-        <button type="button" role="tab" aria-selected="false" id="tabBtnUsers" onclick="switchMainTab('users')" class="px-3.5 py-2 text-xs font-bold text-slate-400 hover:text-white border-b-2 border-transparent flex items-center gap-1.5 whitespace-nowrap transition cursor-pointer">
-            <span>👥</span> <span>User Accounts</span>
+        <button type="button" role="tab" aria-selected="false" id="tabBtnUsers" onclick="switchMainTab('users')" title="User Accounts" aria-label="User Accounts" class="px-3.5 py-2 text-base font-bold text-slate-400 hover:text-white border-b-2 border-transparent flex items-center justify-center whitespace-nowrap transition cursor-pointer">
+            <span>👥</span>
         </button>
-        <button type="button" role="tab" aria-selected="false" id="tabBtnSettings" onclick="switchMainTab('settings')" class="px-3.5 py-2 text-xs font-bold text-slate-400 hover:text-white border-b-2 border-transparent flex items-center gap-1.5 whitespace-nowrap transition cursor-pointer">
-            <span>🛠️</span> <span>Superadmin Settings</span>
+        <button type="button" role="tab" aria-selected="false" id="tabBtnSettings" onclick="switchMainTab('settings')" title="Superadmin Settings" aria-label="Superadmin Settings" class="px-3.5 py-2 text-base font-bold text-slate-400 hover:text-white border-b-2 border-transparent flex items-center justify-center whitespace-nowrap transition cursor-pointer">
+            <span>🛠️</span>
         </button>
     </nav>
 </header>
@@ -578,7 +578,7 @@
                 </div>
             </div>
 
-            <div role="tablist" aria-label="Settings Sections" class="flex items-center gap-1.5 overflow-x-auto pt-2 border-t border-slate-800/80">
+            <div role="tablist" aria-label="Settings Sections" class="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-800/80">
                 <button type="button" role="tab" aria-selected="true" id="settingsSubTab_all" onclick="selectSettingsSection('all')" class="px-3 py-1.5 rounded-lg text-xs font-extrabold bg-sky-600 text-white shadow transition whitespace-nowrap cursor-pointer">All Sections</button>
                 <button type="button" role="tab" aria-selected="false" id="settingsSubTab_profile" onclick="selectSettingsSection('profile')" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition whitespace-nowrap cursor-pointer">👤 Profile</button>
                 <button type="button" role="tab" aria-selected="false" id="settingsSubTab_preferences" onclick="selectSettingsSection('preferences')" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition whitespace-nowrap cursor-pointer">🎛️ Preferences</button>

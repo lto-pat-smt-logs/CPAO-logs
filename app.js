@@ -410,7 +410,7 @@ function getDefaultSettingsObject() {
         integrations: {
             appsScriptUrl: APPS_SCRIPT_URL,
             usersWorksheetName: "Users",
-            logsWorksheetName: "Logs",
+            logsWorksheetName: "PAT/SMT LOGS (WEBAPP)",
             autoQueueOfflineWrites: true
         }
     };
@@ -689,7 +689,7 @@ function populateEnhancedSettingsUI() {
     const iQueue = document.getElementById("cfgIntAutoQueue");
     if (iUrl) iUrl.value = integ.appsScriptUrl || APPS_SCRIPT_URL;
     if (iUsers) iUsers.value = integ.usersWorksheetName || "Users";
-    if (iLogs) iLogs.value = integ.logsWorksheetName || "Logs";
+    if (iLogs) iLogs.value = integ.logsWorksheetName || "PAT/SMT LOGS (WEBAPP)";
     if (iQueue) iQueue.checked = integ.autoQueueOfflineWrites !== false;
 
     populateReportColumnsInputs();
@@ -771,12 +771,14 @@ async function saveEnhancedSettingsForm() {
         clearSessionOnUnload: !!document.getElementById("cfgSecClearOnUnload")?.checked,
         requireReauthForBulkDelete: !!document.getElementById("cfgSecRequireBulkPass")?.checked
     };
+    const prevLogsSheet = getActiveLogsWorksheetName();
     AppState.settings.integrations = {
         appsScriptUrl: (document.getElementById("cfgIntAppsScriptUrl")?.value || APPS_SCRIPT_URL).trim(),
         usersWorksheetName: (document.getElementById("cfgIntUsersSheet")?.value || "Users").trim(),
-        logsWorksheetName: (document.getElementById("cfgIntLogsSheet")?.value || "Logs").trim(),
+        logsWorksheetName: (document.getElementById("cfgIntLogsSheet")?.value || "PAT/SMT LOGS (WEBAPP)").trim(),
         autoQueueOfflineWrites: !!document.getElementById("cfgIntAutoQueue")?.checked
     };
+    const nextLogsSheet = getActiveLogsWorksheetName();
 
     applyThemeMode(selectedColorMode);
 
@@ -789,6 +791,9 @@ async function saveEnhancedSettingsForm() {
 
     lastSettingsSavedAt = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
     await saveAllSettingsToCloud(false);
+    if (prevLogsSheet !== nextLogsSheet) {
+        await fetchFromGoogleSheets();
+    }
     updateUIPrivileges();
     renderTable();
     if (document.getElementById("viewReports")?.style.display !== "none") {
@@ -2089,6 +2094,53 @@ async function flushPendingSyncQueue(silent = true) {
     }
 }
 
+async function syncSharedCloudSettingsQuietly() {
+    if (settingsHasUnsavedChanges || hasPendingSettingsSync()) return false;
+    const scriptUrl = getActiveSettingsAppsScriptUrl();
+    const getActions = ["getSettings", "loadSettings", "readSettings", "fetchSettings"];
+    for (const act of getActions) {
+        try {
+            const response = await fetch(`${scriptUrl}?action=${encodeURIComponent(act)}&sheet=Settings&t=${Date.now()}`, {
+                method: "GET",
+                mode: "cors",
+                cache: "no-store"
+            });
+            if (!response.ok) continue;
+            const rawText = await response.text();
+            let parsedJson = null;
+            try { parsedJson = rawText ? JSON.parse(rawText) : null; } catch (e) { parsedJson = rawText; }
+            const cloudSettings = parseCloudSettingsResponse(parsedJson);
+            if (cloudSettings) {
+                const localUpdatedAt = Number(AppState.settings?._settingsUpdatedAt || 0);
+                const cloudUpdatedAt = Number(cloudSettings?._settingsUpdatedAt || 0);
+                const prevSheet = getActiveLogsWorksheetName();
+                const cloudSheetVal = String(cloudSettings?.integrations?.logsWorksheetName || "").trim();
+                const sheetDiffers = !!(cloudSheetVal && cloudSheetVal !== prevSheet);
+                if (sheetDiffers || cloudUpdatedAt > localUpdatedAt || (cloudUpdatedAt === 0 && cloudSheetVal && cloudSheetVal !== prevSheet)) {
+                    AppState.settings = mergeSettingsSafely(AppState.settings, cloudSettings, true);
+                    if (cloudSheetVal) {
+                        AppState.settings.integrations.logsWorksheetName = cloudSheetVal;
+                    }
+                    if (cloudUpdatedAt > 0) AppState.settings._settingsUpdatedAt = cloudUpdatedAt;
+                    persistLocalSettingsCache();
+                    updateUIPrivileges();
+                    const iLogs = document.getElementById("cfgIntLogsSheet");
+                    if (iLogs && document.activeElement !== iLogs) {
+                        iLogs.value = getActiveLogsWorksheetName();
+                    }
+                    const iUsers = document.getElementById("cfgIntUsersSheet");
+                    if (iUsers && document.activeElement !== iUsers) {
+                        iUsers.value = AppState.settings?.integrations?.usersWorksheetName || "Users";
+                    }
+                    return prevSheet !== getActiveLogsWorksheetName();
+                }
+                break;
+            }
+        } catch (e) {}
+    }
+    return false;
+}
+
 async function pollRealtimeUpdates() {
     if (isSavingTicket || isFlushingSyncQueue) return;
     if (loadPendingSyncQueue().length > 0) return;
@@ -2100,6 +2152,11 @@ async function pollRealtimeUpdates() {
     if (ticketModalOpen || userModalOpen || endorseModalOpen || dupModalOpen) return;
 
     try {
+        const sheetChanged = await syncSharedCloudSettingsQuietly();
+        if (sheetChanged) {
+            await fetchFromGoogleSheets();
+            return;
+        }
         const logsResp = await fetch(`${getActiveSettingsAppsScriptUrl()}?action=getLogs&sheet=${encodeURIComponent(getActiveLogsWorksheetName())}&t=${Date.now()}`, { mode: 'cors' });
         if (!logsResp.ok) return;
         const logsResult = await logsResp.json();
@@ -2443,7 +2500,7 @@ function parseCloudSettingsResponse(rawResult) {
             obj = obj.data;
         }
     }
-    if (obj && typeof obj === "object" && (obj.categories || obj.categoryGroups || obj.platforms || obj.endorsementForm || obj.reportConfig || obj.reportColumns || obj.preferences)) {
+    if (obj && typeof obj === "object" && (obj.categories || obj.categoryGroups || obj.platforms || obj.endorsementForm || obj.reportConfig || obj.reportColumns || obj.preferences || obj.integrations)) {
         return obj;
     }
     return null;
@@ -2481,8 +2538,17 @@ async function fetchSettingsFromCloud() {
     if (cloudSettings) {
         const localUpdatedAt = Number(AppState.settings?._settingsUpdatedAt || 0);
         const cloudUpdatedAt = Number(cloudSettings?._settingsUpdatedAt || 0);
-        if (!hasPendingSettingsSync() && (cloudUpdatedAt >= localUpdatedAt || localUpdatedAt === 0)) {
+        const cloudLogsTab = String(cloudSettings?.integrations?.logsWorksheetName || "").trim();
+        const localLogsTab = String(AppState.settings?.integrations?.logsWorksheetName || "").trim();
+        const hasSharedLogsTabUpdate = !!(cloudLogsTab && cloudLogsTab !== localLogsTab);
+        if (!hasPendingSettingsSync() && (hasSharedLogsTabUpdate || cloudUpdatedAt >= localUpdatedAt || localUpdatedAt === 0 || cloudUpdatedAt === 0)) {
             AppState.settings = mergeSettingsSafely(AppState.settings, cloudSettings, true);
+            if (cloudLogsTab) {
+                AppState.settings.integrations.logsWorksheetName = cloudLogsTab;
+            }
+            if (cloudUpdatedAt > 0) {
+                AppState.settings._settingsUpdatedAt = cloudUpdatedAt;
+            }
             persistLocalSettingsCache();
         }
     }
@@ -3895,7 +3961,7 @@ function switchMainTab(tabName) {
             if(t === 'template') renderTemplateEditorUI();
             if(t === 'users') renderUsersTable();
             if(t === 'settings') { populateEnhancedSettingsUI(); selectSettingsSection(activeSettingsSection); }
-            if(t === 'reports') { loadReportConfigToUI(); populateReportFilterDropdowns(); if (!document.getElementById('repStartDate').value || !document.getElementById('repEndDate').value) { setSystemDateInputValue('repStartDate', '2000-01-01'); setSystemDateInputValue('repEndDate', getTodayISO()); generateReport(); } else generateReport(); }
+            if(t === 'reports') { syncSharedCloudSettingsQuietly().then(changed => { if (changed) fetchFromGoogleSheets(); }); loadReportConfigToUI(); populateReportFilterDropdowns(); if (!document.getElementById('repStartDate').value || !document.getElementById('repEndDate').value) { setSystemDateInputValue('repStartDate', '2000-01-01'); setSystemDateInputValue('repEndDate', getTodayISO()); generateReport(); } else generateReport(); }
             if(t === 'accomplishment') { initAccomplishmentTab(); }
             if(t === 'workday') { renderCalcCalendar(); renderSavedOffDatesSummary(); }
         } else {
