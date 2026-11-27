@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Login — PAT/SMT Logs System (LTO CPAO)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-950 text-white flex items-center justify-center p-4">
+<div class="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-4">
+    <div class="text-center space-y-1">
+        <div class="w-12 h-12 mx-auto rounded-xl bg-blue-600 flex items-center justify-center font-extrabold text-base">LTO</div>
+        <h1 class="text-lg font-extrabold">PAT/SMT Logs System</h1>
+        <p class="text-xs text-slate-400">LTO Central Public Assistance Office</p>
+    </div>
+    <form id="loginForm" class="space-y-3 text-xs">
+        <div>
+            <label class="block text-slate-400 font-bold mb-1 uppercase text-[10px]">Username</label>
+            <input type="text" id="loginUsername" value="admin36" required class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-white outline-none focus:border-blue-500" />
+        </div>
+        <div>
+            <label class="block text-slate-400 font-bold mb-1 uppercase text-[10px]">Password</label>
+            <div class="relative flex items-center">
+                <input type="password" id="loginPassword" value="admin123" required class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 pr-16 text-white outline-none focus:border-blue-500" />
+                <button type="button" id="togglePasswordBtn" onclick="toggleLoginPasswordVisibility()" aria-label="Toggle password visibility" class="absolute right-2 px-2 py-1 text-[10px] font-bold text-sky-400 hover:text-sky-300 rounded cursor-pointer">Show</button>
+            </div>
+        </div>
+        <div id="loginErrorMsg" class="hidden px-3 py-2 rounded-lg bg-rose-950/80 border border-rose-700/70 text-rose-200 text-xs font-semibold"></div>
+        <button type="submit" id="loginSubmitBtn" class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-75 rounded-lg font-extrabold text-white cursor-pointer flex items-center justify-center gap-2 transition">
+            <span id="loginSpinner" class="hidden w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+            <span id="loginBtnText">Sign In</span>
+        </button>
+    </form>
+</div>
+<script>
+function toggleLoginPasswordVisibility() {
+    const inp = document.getElementById('loginPassword');
+    const btn = document.getElementById('togglePasswordBtn');
+    if (!inp || !btn) return;
+    const isPassword = inp.type === 'password';
+    inp.type = isPassword ? 'text' : 'password';
+    btn.textContent = isPassword ? 'Hide' : 'Show';
+}
+
+document.getElementById('loginForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const u = document.getElementById('loginUsername').value.trim();
+    const p = document.getElementById('loginPassword').value;
+    const btn = document.getElementById('loginSubmitBtn');
+    const spinner = document.getElementById('loginSpinner');
+    const btnText = document.getElementById('loginBtnText');
+    const errEl = document.getElementById('loginErrorMsg');
+
+    const showLoginError = (msg) => {
+        if (errEl) {
+            errEl.textContent = msg;
+            errEl.classList.remove('hidden');
+        }
+        if (btn) btn.disabled = false;
+        if (spinner) spinner.classList.add('hidden');
+        if (btnText) btnText.textContent = 'Sign In';
+    };
+
+    if (errEl) {
+        errEl.textContent = '';
+        errEl.classList.add('hidden');
+    }
+    if (btn) btn.disabled = true;
+    if (spinner) spinner.classList.remove('hidden');
+    if (btnText) btnText.textContent = 'Signing in...';
+
+    if (!u || !p) {
+        showLoginError('Please enter both username and password.');
+        return;
+    }
+
+    let usersList = [];
+    try {
+        const cached = localStorage.getItem('LTO_CPAO_USERS_2026');
+        if (cached) {
+            const parsed = JSON.parse(cached);
+            if (Array.isArray(parsed)) usersList = parsed;
+        }
+    } catch (err) {}
+
+    try {
+        const resp = await fetch('https://script.google.com/macros/s/AKfycbzxTmkG0IGHymKn6wfRLgE30KOasQ0AakPmaLzAmz5FrczYnOfFpYSTulagRyw2oylH/exec?action=getUsers&sheet=Users&t=' + Date.now(), {
+            method: 'GET',
+            mode: 'cors',
+            cache: 'no-store'
+        });
+        if (resp.ok) {
+            const data = await resp.json();
+            const cloudUsers = Array.isArray(data) ? data : (data && Array.isArray(data.users) ? data.users : []);
+            if (cloudUsers.length > 0) {
+                usersList = cloudUsers;
+                localStorage.setItem('LTO_CPAO_USERS_2026', JSON.stringify(cloudUsers));
+            }
+        }
+    } catch (err) {}
+
+    const matchedUser = usersList.find(
+        item => String(item.username || '').trim().toLowerCase() === u.toLowerCase()
+    );
+
+    if (!matchedUser || String(matchedUser.pass ?? matchedUser.password ?? '') !== p) {
+        showLoginError('Invalid username or password.');
+        return;
+    }
+
+    sessionStorage.setItem('LTO_ACTIVE_USER', JSON.stringify(matchedUser));
+    window.location.href = 'index.html';
+});
+</script>
+</body>
+</html>
